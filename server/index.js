@@ -38,6 +38,17 @@ app.get("/api/download/:trackId", requireAuth, async (req, res) => {
   if (!t?.audiodownload_allowed) return res.status(403).json({ error: "Download not allowed" });
   res.json({ url: t.audiodownload });
 });
+app.get("/api/debug", async (req, res) => {
+  const r = await fetch(`${J}/tracks/?client_id=${id}&format=json&limit=1`);
+  const d = await r.json();
+  res.json({
+    hasJamendoId: !!id,
+    idLength: id ? id.length : 0,
+    hasFirebaseKey: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+    origin: process.env.CLIENT_ORIGIN,
+    jamendo: d.headers,
+  });
+});
 
 if (!process.env.VERCEL) app.listen(process.env.PORT || 5000, () => console.log("T base server running"));
 export default app;
