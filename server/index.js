@@ -7,7 +7,13 @@ if (!admin.apps.length) {
   admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
 }
 const app = express();
-app.use(cors({ origin: process.env.CLIENT_ORIGIN }));
+app.use(cors({
+  origin: (origin, cb) => {
+    const ok = !origin || origin === process.env.CLIENT_ORIGIN ||
+      /^https:\/\/tbase-[a-z0-9-]+\.vercel\.app$/.test(origin);
+    cb(null, ok);
+  },
+}));
 const J = "https://api.jamendo.com/v3.0";
 const id = process.env.JAMENDO_CLIENT_ID;
 
