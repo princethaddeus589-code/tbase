@@ -21,7 +21,7 @@ const requireAuth = async (req, res, next) => {
 
 app.get("/api/tracks", async (req, res) => {
   const { tag = "", q = "" } = req.query;
-  const p = new URLSearchParams({ client_id: id, format: "json", limit: "40", audioformat: "mp32", order: "popularity_week", include: "musicinfo" });
+  const p = new URLSearchParams({ client_id: id, format: "json", limit: "40", imagesize: "200" });
   if (tag) p.set("tags", tag);
   if (q) p.set("search", q);
   const r = await fetch(`${J}/tracks/?${p}`);
