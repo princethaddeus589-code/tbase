@@ -26,3 +26,6 @@ header{display:flex;gap:14px;align-items:center;margin-bottom:18px}.search{flex:
 .seek input{padding:0;accent-color:var(--acc)}
 @media(max-width:720px){.auth{grid-template-columns:1fr}header{flex-wrap:wrap}.row .ghost:nth-of-type(1){display:none}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.tabs{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}.tabs .on{background:var(--acc);color:#1b1300;border-color:var(--acc);font-weight:700}
+.pick{width:auto;max-width:150px;padding:8px 10px;border-radius:999px}
+.newlist{display:flex;gap:10px;margin-bottom:10px}.plname{font-size:26px;margin:12px 0}
