@@ -1,4 +1,3 @@
-import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import admin from "firebase-admin";
@@ -8,14 +7,14 @@ if (!admin.apps.length) {
 }
 const app = express();
 app.use(cors({
-  origin: (origin, cb) => {
-    const ok = !origin || origin === process.env.CLIENT_ORIGIN ||
-      /^https:\/\/tbase-[a-z0-9-]+\.vercel\.app$/.test(origin);
-    cb(null, ok);
-  },
+  origin: (o, cb) => cb(null, !o || o === process.env.CLIENT_ORIGIN || /^https:\/\/tbase-[a-z0-9-]+\.vercel\.app$/.test(o)),
 }));
+
 const J = "https://api.jamendo.com/v3.0";
+const A = "https://api.audius.co/v1";
 const id = process.env.JAMENDO_CLIENT_ID;
+const clean = (s = "") => s.replaceAll("&amp;", "&");
+const GENRES = { hiphop: "Hip-Hop/Rap", electronic: "Electronic", pop: "Pop", rock: "Rock", jazz: "Jazz", classical: "Classical", country: "Country", metal: "Metal", lofi: "Lo-Fi" };
 
 const requireAuth = async (req, res, next) => {
   try {
@@ -25,17 +24,34 @@ const requireAuth = async (req, res, next) => {
   } catch { res.status(401).json({ error: "Please log in" }); }
 };
 
-app.get("/api/tracks", async (req, res) => {
-  const { tag = "", q = "" } = req.query;
-  const p = new URLSearchParams({ client_id: id, format: "json", limit: "40", imagesize: "200" });
+async function jamendo(tag, q) {
+  const p = new URLSearchParams({ client_id: id, format: "json", limit: "40", imagesize: "200", order: "popularity_week" });
   if (tag) p.set("tags", tag);
   if (q) p.set("search", q);
-  const r = await fetch(`${J}/tracks/?${p}`);
-  const data = await r.json();
-  res.json((data.results || []).map((t) => ({
-    id: t.id, title: t.name, artist: t.artist_name, image: t.image, audio: t.audio,
-    downloadable: t.audiodownload_allowed,
-  })));
+  const d = await (await fetch(`${J}/tracks/?${p}`)).json();
+  return (d.results || []).map((t) => ({
+    id: String(t.id), title: clean(t.name), artist: clean(t.artist_name), image: t.image, audio: t.audio,
+    downloadable: !!t.audiodownload_allowed, source: "jamendo",
+  }));
+}
+
+async function audius(tag, q) {
+  const g = GENRES[tag];
+  const url = q || (tag && !g)
+    ? `${A}/tracks/search?query=${encodeURIComponent(q || tag)}&app_name=TBASE`
+    : `${A}/tracks/trending?time=week&limit=40&app_name=TBASE${g ? `&genre=${encodeURIComponent(g)}` : ""}`;
+  const d = await (await fetch(url)).json();
+  return (d.data || []).slice(0, 40).map((t) => ({
+    id: "a" + t.id, title: clean(t.title), artist: clean(t.user?.name),
+    image: t.artwork?.["480x480"] || t.artwork?.["150x150"] || "",
+    audio: `${A}/tracks/${t.id}/stream?app_name=TBASE`, downloadable: false, source: "audius",
+  }));
+}
+
+app.get("/api/tracks", async (req, res) => {
+  const { source = "jamendo", tag = "", q = "" } = req.query;
+  try { res.json(await (source === "audius" ? audius : jamendo)(tag, q)); }
+  catch { res.json([]); }
 });
 
 app.get("/api/download/:trackId", requireAuth, async (req, res) => {
@@ -43,17 +59,6 @@ app.get("/api/download/:trackId", requireAuth, async (req, res) => {
   const t = (await r.json()).results?.[0];
   if (!t?.audiodownload_allowed) return res.status(403).json({ error: "Download not allowed" });
   res.json({ url: t.audiodownload });
-});
-app.get("/api/debug", async (req, res) => {
-  const r = await fetch(`${J}/tracks/?client_id=${id}&format=json&limit=1`);
-  const d = await r.json();
-  res.json({
-    hasJamendoId: !!id,
-    idLength: id ? id.length : 0,
-    hasFirebaseKey: !!process.env.FIREBASE_SERVICE_ACCOUNT,
-    origin: process.env.CLIENT_ORIGIN,
-    jamendo: d.headers,
-  });
 });
 
 if (!process.env.VERCEL) app.listen(process.env.PORT || 5000, () => console.log("T base server running"));
