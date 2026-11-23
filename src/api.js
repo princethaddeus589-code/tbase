@@ -1,8 +1,8 @@
 import { auth } from "./firebase";
 const BASE = import.meta.env.VITE_API_URL || "";
 
-export async function fetchTracks({ tag = "", q = "" } = {}) {
-  const p = new URLSearchParams({ tag, q });
+export async function fetchTracks({ source = "jamendo", tag = "", q = "" } = {}) {
+  const p = new URLSearchParams({ source, tag, q });
   const r = await fetch(`${BASE}/api/tracks?${p}`);
   if (!r.ok) throw new Error("Could not load music");
   return r.json();
