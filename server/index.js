@@ -49,9 +49,15 @@ async function audius(tag, q) {
 }
 
 app.get("/api/tracks", async (req, res) => {
-  const { source = "jamendo", tag = "", q = "" } = req.query;
-  try { res.json(await (source === "audius" ? audius : jamendo)(tag, q)); }
-  catch { res.json([]); }
+  const { source = "all", tag = "", q = "" } = req.query;
+  try {
+    if (source === "jamendo") return res.json(await jamendo(tag, q));
+    if (source === "audius") return res.json(await audius(tag, q));
+    const [a, b] = await Promise.allSettled([audius(tag, q), jamendo(tag, q)]);
+    const x = a.value || [], y = b.value || [], out = [];
+    for (let i = 0; i < Math.max(x.length, y.length); i++) { if (x[i]) out.push(x[i]); if (y[i]) out.push(y[i]); }
+    res.json(out);
+  } catch { res.json([]); }
 });
 
 app.get("/api/download/:trackId", requireAuth, async (req, res) => {
